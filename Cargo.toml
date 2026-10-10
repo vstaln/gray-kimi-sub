@@ -1,0 +1,20 @@
+[package]
+name = "gray-kimi-sub"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Kimi (Moonshot AI) provider sidecar plugin for the gray agent harness"
+license = "MIT"
+
+[lib]
+name = "kimi_sub"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kimi-sub"
+path = "src/main.rs"
+
+[dependencies]
+gray-acp-bridge = { path = "../gray-acp-bridge" }
+gray-openai-compat = { path = "../gray-openai-compat" }
+serde_json = { version = "1", features = ["preserve_order"] }
