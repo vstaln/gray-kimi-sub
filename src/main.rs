@@ -305,6 +305,10 @@ fn sidecar() -> std::io::Result<()> {
             Some(id) => {
                 let reply = if method == "plugin/manifest" {
                     json!({"id": id, "result": manifest()})
+                } else if method == "plugin/shutdown" {
+                    let _ = writeln!(out, "{}", json!({"id": id, "result": {}}));
+                    let _ = out.flush();
+                    return Ok(());
                 } else {
                     let mut r = handle(&intents, method, &v["params"]);
                     r["id"] = id;
