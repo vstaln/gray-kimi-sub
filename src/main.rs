@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use acp_bridge::manifest as pmanifest;
 use acp_bridge::relay::{self, Intents};
-use openai_compat::{compat_turn, credential_key, probe_models, Compat};
+use openai_compat::{compat_turn, probe_models, Compat};
 use serde_json::{json, Value};
 
 const NAME: &str = "kimi";
@@ -83,10 +83,24 @@ fn write_config(v: &Value) -> std::io::Result<()> {
     Ok(())
 }
 
+fn params_api_key(params: &Value) -> Option<String> {
+    let secrets = params
+        .pointer("/credential/credential/secrets")?
+        .as_object()?;
+    for name in ["api_key", "key", "token", "access_token", "secret"] {
+        if let Some(v) = secrets.get(name).and_then(Value::as_str) {
+            if !v.is_empty() {
+                return Some(v.to_string());
+            }
+        }
+    }
+    None
+}
+
 /// Persist a host-delivered credential so `provider/chat` (which carries
 /// none) can still authenticate. Never logs the value.
 fn cache_credential(params: &Value) {
-    if let Some(key) = credential_key(params) {
+    if let Some(key) = params_api_key(params) {
         let mut cfg = read_config();
         cfg["api_key"] = json!(key);
         let _ = write_config(&cfg);
@@ -134,7 +148,7 @@ fn provider_models(params: &Value) -> Result<Value, Value> {
     cache_credential(params);
     let mut cfg = resolve();
     if cfg.api_key.is_none() {
-        cfg.api_key = credential_key(params);
+        cfg.api_key = params_api_key(params);
     }
     if keyless_on_vendor(&cfg) {
         return Ok(fallback_catalog());
