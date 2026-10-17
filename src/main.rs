@@ -97,11 +97,11 @@ fn resolve() -> Compat {
     let file = read_config();
     let base = std::env::var(ENV_BASE).ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| file["base_url"].as_str().map(str::to_string))
+        .or_else(|| file["base_url"].as_str().filter(|s| !s.is_empty()).map(str::to_string))
         .unwrap_or_else(|| DEFAULT_BASE.to_string());
     let key = std::env::var(ENV_KEY).ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| file["api_key"].as_str().map(str::to_string));
+        .or_else(|| file["api_key"].as_str().filter(|s| !s.is_empty()).map(str::to_string));
     Compat::new(base, key)
 }
 
@@ -112,33 +112,46 @@ fn err(code: &str, msg: impl Into<String>, retryable: bool) -> Value {
            "terminal": !retryable})
 }
 
+fn missing_key_error() -> Value {
+    err("invalid_grant",
+        format!("no {NAME} API key configured — set ${ENV_KEY} or run `{NAME}-sub setup --key K`"),
+        false)
+}
+
+fn keyless_on_vendor(cfg: &Compat) -> bool {
+    cfg.api_key.is_none() && cfg.upstream_base == DEFAULT_BASE
+}
+
+fn fallback_catalog() -> Value {
+    let rows: Vec<Value> = FALLBACK_MODELS
+        .iter()
+        .map(|id| json!({"id": id, "name": id}))
+        .collect();
+    json!({"models": rows})
+}
+
 fn provider_models(params: &Value) -> Result<Value, Value> {
     cache_credential(params);
     let mut cfg = resolve();
     if cfg.api_key.is_none() {
         cfg.api_key = credential_key(params);
     }
+    if keyless_on_vendor(&cfg) {
+        return Ok(fallback_catalog());
+    }
     match probe_models(&cfg) {
         Ok(rows) if !rows.is_empty() => Ok(json!({"models": rows})),
-        Ok(_) | Err(_) => {
-            let rows: Vec<Value> = FALLBACK_MODELS
-                .iter()
-                .map(|id| json!({"id": id, "name": id}))
-                .collect();
-            if rows.is_empty() {
-                Err(err("unavailable",
-                    format!("couldn't list models from {}", cfg.upstream_base), true))
-            } else {
-                Ok(json!({"models": rows}))
-            }
-        }
+        _ => Ok(fallback_catalog()),
     }
 }
 
 fn provider_chat(intents: &Intents, params: &Value) -> Result<Value, Value> {
     let model = params["model"].as_str().unwrap_or_default().to_string();
-    let cfg = Arc::new(resolve());
-    let turn = compat_turn(cfg, None);
+    let cfg = resolve();
+    if keyless_on_vendor(&cfg) {
+        return Err(missing_key_error());
+    }
+    let turn = compat_turn(Arc::new(cfg), None);
     let (relay_url, relay_token) = relay::mint_turn(intents, &model, turn, TOKEN_PREFIX)
         .map_err(|e| err("unavailable", e, true))?;
     Ok(json!({"relay_url": relay_url, "relay_token": relay_token}))
