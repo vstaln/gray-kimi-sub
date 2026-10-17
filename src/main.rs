@@ -278,6 +278,15 @@ fn run_cli(argv: &[String]) -> Result<String, String> {
 
 // ---------- wire loop ----------
 
+fn provider_usage() -> Value {
+    json!({
+        "available": resolve().api_key.is_some(),
+        "title": DISPLAY,
+        "windows": [],
+        "note": format!("{DISPLAY} exposes no quota counter over the OpenAI-compatible API"),
+    })
+}
+
 fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
     match method {
         "provider/models" => match provider_models(params) {
@@ -296,7 +305,7 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
             Ok(r) => json!({"result": r}),
             Err(e) => json!({"error": e}),
         },
-        "provider/usage" => json!({"result": {"windows": []}}),
+        "provider/usage" => json!({"result": provider_usage()}),
         "plugin/tools" => json!({"result": {"tools": []}}),
         "command/run" => {
             let argv: Vec<String> = params["argv"]
