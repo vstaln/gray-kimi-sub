@@ -224,14 +224,22 @@ fn key_source_label() -> String {
 fn run_cli(argv: &[String]) -> Result<String, String> {
     match argv.first().map(String::as_str) {
         Some("status") | None => Ok(cli_status()),
-        Some("models") => match probe_models(&resolve()) {
-            Ok(rows) => Ok(rows
-                .iter()
-                .filter_map(|m| m["id"].as_str())
-                .collect::<Vec<_>>()
-                .join("\n")),
-            Err(e) => Err(e),
-        },
+        Some("models") => {
+            let cfg = resolve();
+            if keyless_on_vendor(&cfg) {
+                return Err(format!(
+                    "no API key configured — set ${ENV_KEY} or `{NAME}-sub setup --key K`"
+                ));
+            }
+            match probe_models(&cfg) {
+                Ok(rows) => Ok(rows
+                    .iter()
+                    .filter_map(|m| m["id"].as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n")),
+                Err(e) => Err(e),
+            }
+        }
         Some("setup") => {
             let mut cfg = read_config();
             let mut it = argv[1..].iter();
