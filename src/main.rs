@@ -161,7 +161,20 @@ fn provider_revoke(_params: &Value) -> Result<Value, Value> {
     let mut cfg = read_config();
     cfg.as_object_mut().map(|m| m.remove("api_key"));
     let _ = write_config(&cfg);
-    Ok(json!({"revoked": true}))
+    Ok(json!({"status": "revoked"}))
+}
+
+fn auth_refresh(params: &Value) -> Result<Value, Value> {
+    cache_credential(params);
+    let cfg = resolve();
+    if keyless_on_vendor(&cfg) {
+        return Err(missing_key_error());
+    }
+    Ok(json!({"credential": {
+        "secrets": {"relay_verified": "1"},
+        "metadata": {},
+        "expires_at": Value::Null,
+    }}))
 }
 
 // ---------- command surface ----------
@@ -249,11 +262,11 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
             Ok(r) => json!({"result": r}),
             Err(e) => json!({"error": e}),
         },
-        "provider/refresh" => {
-            cache_credential(params);
-            json!({"result": {"refreshed": true}})
-        }
-        "provider/revoke" => match provider_revoke(params) {
+        "provider/auth/refresh" => match auth_refresh(params) {
+            Ok(r) => json!({"result": r}),
+            Err(e) => json!({"error": e}),
+        },
+        "provider/auth/revoke" => match provider_revoke(params) {
             Ok(r) => json!({"result": r}),
             Err(e) => json!({"error": e}),
         },
