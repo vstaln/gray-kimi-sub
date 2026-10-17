@@ -160,6 +160,10 @@ fn provider_models(params: &Value) -> Result<Value, Value> {
 }
 
 fn provider_chat(intents: &Intents, params: &Value) -> Result<Value, Value> {
+    let provider = params["provider"].as_str().unwrap_or_default();
+    if !provider.is_empty() && provider != PROVIDER_ID {
+        return Err(err("protocol", format!("unknown provider {provider:?}"), false));
+    }
     let model = params["model"].as_str().unwrap_or_default().to_string();
     let cfg = resolve();
     if keyless_on_vendor(&cfg) {
@@ -293,6 +297,7 @@ fn handle(intents: &Intents, method: &str, params: &Value) -> Value {
             Err(e) => json!({"error": e}),
         },
         "provider/usage" => json!({"result": {"windows": []}}),
+        "plugin/tools" => json!({"result": {"tools": []}}),
         "command/run" => {
             let argv: Vec<String> = params["argv"]
                 .as_array()
