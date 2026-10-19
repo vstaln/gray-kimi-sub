@@ -1,6 +1,6 @@
 [package]
 name = "gray-kimi-sub"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.88"
 description = "Kimi (Moonshot AI) provider sidecar plugin for the gray agent harness"
