@@ -46,6 +46,7 @@ fn manifest() -> Value {
             &["models", "chat"], CACHE_TTL_SECS,
         )],
         "commands": ["/kimi"],
+        "command_descriptions": {"/kimi": "switch to Kimi models"},
         "subcommands": ["kimi"],
     })
 }
