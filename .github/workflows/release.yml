@@ -28,12 +28,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Check out sibling crates
-        shell: bash
-        run: |
-          for r in gray-acp-bridge gray-openai-compat; do
-            git clone --depth 1 "https://github.com/vstaln/$r" "../$r"
-          done
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
