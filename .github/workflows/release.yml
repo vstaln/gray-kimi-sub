@@ -31,7 +31,6 @@ jobs:
       - name: Check out sibling crates
         shell: bash
         run: |
-          for r in gray-acp-bridge gray-openai-compat; do
             git clone --depth 1 "https://github.com/vstaln/$r" "../$r"
           done
       - uses: dtolnay/rust-toolchain@stable
